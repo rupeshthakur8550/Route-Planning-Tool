@@ -15,6 +15,7 @@ const Map = ({ technicianLocation }) => {
     const [checkboxes, setCheckboxes] = useState([]);
     const [allChecked, setAllChecked] = useState(false);
     const [coordinates, setCoordinates] = useState([]);
+    const [markerVisibility, setMarkerVisibility] = useState({});
 
     useEffect(() => {
         if (!map.current) {
@@ -47,11 +48,18 @@ const Map = ({ technicianLocation }) => {
                     const coordinatesArray = data.map(element => [element.longitude, element.latitude]);
                     setCoordinates(coordinatesArray);
 
+                    // Initialize marker visibility state
+                    const initialMarkerVisibility = {};
+                    coordinatesArray.forEach((_, index) => {
+                        initialMarkerVisibility[index] = true; // Initially all markers are visible
+                    });
+                    setMarkerVisibility(initialMarkerVisibility);
+
                     const checkboxes = data.map((element, index) => (
                         <div key={`address${index}`}>
                             <input
                                 type="checkbox"
-                                defaultChecked={false}
+                                checked={markerVisibility[index]} // Use markerVisibility to determine checked status
                                 id={`address${index}`}
                                 className="address-checkbox"
                                 value={element.address}
@@ -68,19 +76,21 @@ const Map = ({ technicianLocation }) => {
         }
     }, [technicianLocation]);
 
+    useEffect(() => {
+        const allChecked = Object.values(markerVisibility).every(visible => visible);
+        setAllChecked(allChecked);
+    }, [markerVisibility]);
+
     const handleCheckboxChange = (index) => {
-        setCheckboxes(prevCheckboxes => {
-            const updatedCheckboxes = [...prevCheckboxes];
-            updatedCheckboxes[index] = {
-                ...updatedCheckboxes[index],
-                props: {
-                    ...updatedCheckboxes[index].props,
-                    defaultChecked: !updatedCheckboxes[index].props.defaultChecked
-                }
-            };
-            const allChecked = updatedCheckboxes.every(checkbox => checkbox.props.defaultChecked);
+        setMarkerVisibility(prevVisibility => {
+            const updatedVisibility = { ...prevVisibility };
+            updatedVisibility[index] = !updatedVisibility[index]; // Toggle marker visibility
+            
+            // Check if all markers are checked
+            const allChecked = Object.values(updatedVisibility).every(visible => visible);
             setAllChecked(allChecked);
-            return updatedCheckboxes;
+            
+            return updatedVisibility;
         });
     };
     
@@ -98,13 +108,14 @@ const Map = ({ technicianLocation }) => {
 
                 {/* Render markers for each coordinate */}
                 {coordinates.map((coord, index) => (
-                    <Marker key={`marker${index}`} longitude={coord[0]} latitude={coord[1]} map={map.current} color="blue" />
+                    markerVisibility[index] && // Check visibility before rendering
+                    <Marker key={`marker${index}`} longitude={coord[0]} latitude={coord[1]} map={map.current}/>
                 ))}
             </div>
             <div className="sidebar absolute top-0 left-0 m-4 blur-0 bg-orange-200 text-black p-3 rounded-lg z-10">
                 <p>Technician ID: {technicianId}</p>
                 {checkboxes} 
-                {allChecked ? (
+                {!allChecked ? (
                     <button onClick={handleTaskCompleted} className='bg-green-500 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md mt-2'>
                         Task Completed
                     </button>
