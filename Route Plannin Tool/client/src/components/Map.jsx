@@ -94,11 +94,11 @@ const Map = ({ technicianLocation }) => {
                 <div ref={mapContainer} className="absolute inset-0" />
 
                 {/* Render Marker component passing initial longitude, latitude, and map instance */}
-                <Marker longitude={technicianLocation.longitude} latitude={technicianLocation.latitude} map={map.current} />
+                <Marker longitude={technicianLocation.longitude} latitude={technicianLocation.latitude} map={map.current} color="#FF0000"/>
 
                 {/* Render markers for each coordinate */}
                 {coordinates.map((coord, index) => (
-                    <Marker key={`marker${index}`} longitude={coord[0]} latitude={coord[1]} map={map.current} />
+                    <Marker key={`marker${index}`} longitude={coord[0]} latitude={coord[1]} map={map.current} color="blue" />
                 ))}
             </div>
             <div className="sidebar absolute top-0 left-0 m-4 blur-0 bg-orange-200 text-black p-3 rounded-lg z-10">
