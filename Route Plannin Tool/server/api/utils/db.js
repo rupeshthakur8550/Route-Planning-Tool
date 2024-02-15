@@ -1,30 +1,47 @@
-import sqlite3 from 'sqlite3';
+import sqlite3 from "sqlite3";
 
 const db = new sqlite3.Database('database.db', (err) => {
-    if (err) {
-        console.error('Error connecting to database:', err.message);
-    } else {
-        console.log('Connected to the database');
-        // Create the 'jobs' table if it doesn't exist
-        db.run("CREATE TABLE IF NOT EXISTS jobs (id INTEGER PRIMARY KEY, address TEXT, completed BOOLEAN DEFAULT 0)", (err) => {
-            if (err) {
-                console.error('Error creating table:', err.message);
-            } else {
-                console.log('Table "jobs" created successfully');
-            }
-        });
-        db.run("CREATE TABLE IF NOT EXISTS jobs (id INTEGER PRIMARY KEY, address TEXT, completed BOOLEAN DEFAULT 0)", (err) => {
-            if (err) {
-                console.error('Error creating table:', err.message);
-            } else {
-                console.log('Table "jobs" created successfully');
-            }
-        });
-    }
+  if (err) {
+    console.error(err.message);
+  }
+  console.log('Connected to the database.');
+  createTables(); 
 });
 
-db.on('error', (err) => {
-    console.error('Database error:', err.message);
-});
+const createTables = () => {
+  const sql_create_technician = `
+    CREATE TABLE IF NOT EXISTS technician (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      location TEXT NOT NULL,
+      longitude REAL NOT NULL,
+      latitude REAL NOT NULL,
+      completion_status INTEGER DEFAULT 0
+    )
+  `;
+
+  const sql_create_address = `
+    CREATE TABLE IF NOT EXISTS address (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      address TEXT NOT NULL,
+      longitude REAL NOT NULL,
+      latitude REAL NOT NULL,
+      technician_id INTEGER NOT NULL,
+      completion_status INTEGER DEFAULT 0,
+      FOREIGN KEY (technician_id) REFERENCES technician(id)
+    )
+  `;
+
+  db.exec(sql_create_technician, (err) => {
+    if (err) {
+      console.error(err.message);
+    }
+  });
+
+  db.exec(sql_create_address, (err) => {
+    if (err) {
+      console.error(err.message);
+    }
+  });
+};
 
 export default db;

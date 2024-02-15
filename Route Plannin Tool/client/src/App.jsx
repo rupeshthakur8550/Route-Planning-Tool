@@ -2,33 +2,101 @@ import React, { useState, useEffect } from 'react';
 import './App.css';
 import Inputs from './components/Inputs';
 import Map from './components/Map';
-import useGeocode from './components/customhooks/useGeoCode'; // Import the useGeocode hook
+import useGeocode from './components/customhooks/useGeoCode';
 
 function App() {
   const [homeAddresses, setHomeAddresses] = useState([]);
   const [technicianAddress, setTechnicianAddress] = useState([]);
   const [routePlanned, setRoutePlanned] = useState(false);
-  const geocodeAddress = useGeocode(); // Initialize the useGeocode hook
+  const [id, setId] = useState(0);
+  const [combinedAddresses, setCombinedAddresses] = useState(null);
+  const [technicianLocation, setTechnicianLocation] = useState(null);
+  const geocodeAddress = useGeocode();
+
+  useEffect(() => {
+    if (id !== 0) {
+      combinedAddresses.Addresses.forEach(addressData => {
+        fetch('http://localhost:3001/api/address', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            address: addressData.address,
+            longitude: addressData.coordinates[0],
+            latitude: addressData.coordinates[1],
+            technician_id: id,
+          })
+        })
+          .then(res => {
+            if (res.ok) {
+              return res.json();
+            } else {
+              throw new Error('Address data not added successfully');
+            }
+          })
+          .then(data => {
+            console.log('Address data added successfully:');
+          })
+          .catch(error => {
+            console.error('Error storing address data:', error);
+          });
+      });
+    }
+  }, [id, combinedAddresses]);
 
   const handlePlanRoute = async () => {
     const homeAddressCoordinates = await Promise.all(homeAddresses.map(address => geocodeAddress(address)));
     const technicianAddressCoordinates = await Promise.all(technicianAddress.map(address => geocodeAddress(address)));
-
-    const combinedAddresses = {
+  
+    const combinedAddressesData = {
       "Addresses": homeAddresses.map((address, index) => ({ address, coordinates: homeAddressCoordinates[index] })),
       "Technician_Address": technicianAddress.map((address, index) => ({ address, coordinates: technicianAddressCoordinates[index] }))
     };
-
-    console.log(`Addresses for route planning:`, combinedAddresses);
-
+  
+    setCombinedAddresses(combinedAddressesData);
+  
+    const techniciandata = {
+      location: combinedAddressesData.Technician_Address[0].address,
+      longitude: combinedAddressesData.Technician_Address[0].coordinates[0],
+      latitude: combinedAddressesData.Technician_Address[0].coordinates[1]
+    };
+  
+    fetch('http://localhost:3001/api/technician', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(techniciandata)
+    })
+      .then(res => {
+        if (res.ok) {
+          return res.json();
+        } else {
+          throw new Error('Technician data not added successfully');
+        }
+      })
+      .then(data => {
+        console.log('Technician data added successfully');
+        const technicianId = data.technician_id;
+        setId(technicianId);
+        setTechnicianLocation({
+          longitude: techniciandata.longitude,
+          latitude: techniciandata.latitude,
+          id: technicianId
+        });
+      })
+      .catch(error => {
+        console.error('Error storing technician data:', error);
+      });
+  
     setRoutePlanned(true);
   };
-
+  
   return (
-
     <div className="App">
-      {routePlanned ? (
-        <Map homeAddresses={homeAddresses} />
+      {routePlanned && technicianLocation !== null ? (
+        <Map technicianLocation={technicianLocation} />
       ) : (
         <div className="absolute inset-x-0 top-0 flex items-center justify-center">
           <div className="p-5 bg-transparent rounded-lg shadow-lg">
@@ -63,3 +131,4 @@ function App() {
 }
 
 export default App;
+
