@@ -1,129 +1,74 @@
 import React, { useRef, useEffect, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import Marker from './Marker';
+import MapRouteMarker from './MapRouteMarker';
 
+// Ensure Mapbox access token is set
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX;
 
 const Map = ({ technicianLocation }) => {
     const mapContainer = useRef(null);
     const map = useRef(null);
-    const [lng, setLng] = useState(technicianLocation?.longitude || 0);
-    const [lat, setLat] = useState(technicianLocation?.latitude || 0);
-    const [zoom, setZoom] = useState(12);
-    const [technicianId, setTechnicianId] = useState(technicianLocation?.id || 0);
-    const [checkboxes, setCheckboxes] = useState([]);
-    const [allChecked, setAllChecked] = useState(false);
     const [coordinates, setCoordinates] = useState([]);
-    const [markerVisibility, setMarkerVisibility] = useState({});
-    const [technicianLocationVisible, setTechnicianLocationVisible] = useState(false);
+    const [lineCoordinates, setLineCoordinates] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (!map.current) {
-            map.current = new mapboxgl.Map({
-                container: mapContainer.current,
-                style: 'mapbox://styles/mapbox/streets-v12',
-                center: [lng, lat],
-                zoom: zoom
-            });
-
-            map.current.on('move', () => {
-                setLng(map.current.getCenter().lng.toFixed(4));
-                setLat(map.current.getCenter().lat.toFixed(4));
-                setZoom(map.current.getZoom().toFixed(2));
-            });
-        }
-
-        // Update the map center if the technician location changes
+        // Call API to get address data and shortest path data
         if (technicianLocation) {
-            map.current.setCenter([technicianLocation.longitude, technicianLocation.latitude]);
-            setTechnicianId(technicianLocation.id);
-        }
+            setLoading(true); // Set loading state
+            Promise.all([
+                fetch(`http://localhost:3001/api/address/${technicianLocation.id}`).then(response => response.json()),
+                fetch(`http://localhost:3001/api/shortestpath/${technicianLocation.id}`).then(response => response.json())
+            ]).then(([addressData, shortestPathData]) => {
+                console.log('Address data:', addressData); // Log address data
+                console.log('Shortest path data:', shortestPathData); // Log shortest path data
 
-        // Call API to get address data when technicianLocation changes
-        if (technicianLocation) {
-            fetch(`http://localhost:3001/api/address/${technicianLocation.id}`)
-                .then(response => response.json())
-                .then(data => {
-                    const coordinatesArray = data.map(element => [element.longitude, element.latitude]);
-                    setCoordinates(coordinatesArray);
+                const coordinatesArray = addressData.map(element => ({ lon: element.longitude, lat: element.latitude }));
+                setCoordinates(coordinatesArray);
 
-                    const initialMarkerVisibility = {};
-                    coordinatesArray.forEach((_, index) => {
-                        initialMarkerVisibility[index] = true; // Initially all markers are visible
-                    });
-                    setMarkerVisibility(initialMarkerVisibility);
+                const lineCoordinatesArray = shortestPathData.map(element => ({ name: element.name, lon: element.lon, lat: element.lat }));
+                setLineCoordinates(lineCoordinatesArray);
 
-                    const checkboxes = data.map((element, index) => (
-                        <div key={`address${index}`}>
-                            <input
-                                type="checkbox"
-                                checked={markerVisibility[index]} 
-                                id={`address${index}`}
-                                className="address-checkbox"
-                                value={element.address}
-                                onChange={() => handleCheckboxChange(index)}
-                            />
-                            <label htmlFor={`address${index}`}>{element.address}</label>
-                            <br />
-                        </div>
-                    ));
-
-                    setCheckboxes(checkboxes);
-                })
-                .catch(error => console.error('Error fetching address data:', error));
+                setLoading(false); // Clear loading state
+            }).catch(error => {
+                console.error('Error fetching data:', error);
+                setLoading(false); // Clear loading state in case of error
+            });
         }
     }, [technicianLocation]);
 
     useEffect(() => {
-        const anyChecked = Object.values(markerVisibility).some(visible => visible);
-        const location = Object.values(markerVisibility).some(visible => !visible); 
-        setAllChecked(!anyChecked);
-        setTechnicianLocationVisible(!location);
-    }, [markerVisibility]);
+        // Initialize map
+        if (!map.current && technicianLocation) {
+            map.current = new mapboxgl.Map({
+                container: mapContainer.current,
+                style: 'mapbox://styles/mapbox/streets-v12',
+                center: [technicianLocation.longitude, technicianLocation.latitude],
+                zoom: 12
+            });
+        }
 
-    const handleCheckboxChange = (index) => {
-        setMarkerVisibility(prevVisibility => {
-            const updatedVisibility = { ...prevVisibility };
-            updatedVisibility[index] = !updatedVisibility[index];
-            const anyChecked = Object.values(updatedVisibility).some(visible => visible);
-            setAllChecked(anyChecked);
-            return updatedVisibility;
-        });
-    };
-
-    const technicianMarker = technicianLocationVisible ? (
-        <Marker longitude={technicianLocation.longitude} latitude={technicianLocation.latitude} map={map.current} color="#FF0000" />
-    ) : null;
-
-    const addressMarkers = coordinates.map((coord, index) => (
-        markerVisibility[index] && (
-            <Marker key={`marker${index}`} longitude={coord[0]} latitude={coord[1]} map={map.current} />
-        )
-    ));
-
-    const handleTaskCompleted = () => {
-        console.log('Task completed!');
-    };
+        return () => {
+            // Clean up map
+            if (map.current) {
+                map.current.remove();
+                map.current = null;
+            }
+        };
+    }, [technicianLocation]);
 
     return (
         <div className="h-screen flex items-center justify-center">
-            <div className="absolute inset-0 overflow-hidden">
-                <div ref={mapContainer} className="absolute inset-0" />
-                {technicianMarker}
-                {addressMarkers}
-            </div>
-            <div className="sidebar absolute top-0 left-0 m-4 blur-0 bg-orange-200 text-black p-3 rounded-lg z-10">
-                <p>Technician ID: {technicianId}</p>
-                {checkboxes}
-                {allChecked && (
-                    <button onClick={handleTaskCompleted} className='bg-green-500 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md mt-2'>
-                        Task Completed
-                    </button>
-                )}
+            <div className="absolute inset-0 overflow-hidden" ref={mapContainer}>
+                {loading ? (
+                    <div>Loading...</div>
+                ) : lineCoordinates.length > 0 && technicianLocation && coordinates.length > 0 ? (
+                    <MapRouteMarker technicianLocation={technicianLocation} coordinates={coordinates} waypoints={lineCoordinates} />
+                ) : null}
             </div>
         </div>
     );
-}
+};
 
 export default Map;
