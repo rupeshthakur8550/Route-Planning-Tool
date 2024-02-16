@@ -41,4 +41,21 @@ router.put('/technician/:technician_id/completion', (req, res) => {
     });
 });
 
+router.delete('/technician/:technician_id', (req, res) => {
+    const technician_id = req.params.technician_id;
+
+    db.run(`DELETE FROM technician WHERE id = ?`, [technician_id], function(err) {
+        if (err) {
+            console.error(err.message);
+            res.status(500).send('Error deleting entry for the provided technician ID');
+        } else {
+            if (this.changes > 0) {
+                res.status(200).json({ message: 'Entry deleted successfully' });
+            } else {
+                res.status(404).send('Technician ID not found');
+            }
+        }
+    });
+});
+
 export default router;
