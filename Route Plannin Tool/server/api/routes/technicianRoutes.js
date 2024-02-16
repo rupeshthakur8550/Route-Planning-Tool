@@ -3,8 +3,8 @@ import db from '../utils/db.js';
 
 const router = express.Router();
 
+// Route to insert a new technician
 router.post('/technician', (req, res) => {
-
     const { location, longitude, latitude } = req.body;
 
     db.run(`INSERT INTO technician (location, longitude, latitude) 
@@ -15,9 +15,27 @@ router.post('/technician', (req, res) => {
         } else {
             console.log(`Inserted a row with the ID: ${this.lastID}`);
             if (this.lastID) {
-              res.status(200).json({ technician_id: this.lastID });
+                res.status(200).json({ technician_id: this.lastID });
             } else {
-              res.status(500).send('No result returned from the database');
+                res.status(500).send('No result returned from the database');
+            }
+        }
+    });
+});
+
+// Route to update completion status to 1 for a provided technician ID
+router.put('/technician/:technician_id/completion', (req, res) => {
+    const technician_id = req.params.technician_id;
+
+    db.run(`UPDATE technician SET completion_status = 1 WHERE id = ?`, [technician_id], function(err) {
+        if (err) {
+            console.error(err.message);
+            res.status(500).send('Error updating completion status for the provided technician ID');
+        } else {
+            if (this.changes > 0) {
+                res.status(200).json({ message: 'Completion status updated successfully' });
+            } else {
+                res.status(404).send('Technician ID not found');
             }
         }
     });
