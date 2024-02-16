@@ -1,80 +1,96 @@
-import express from 'express';
-import findNearestNeighbor from '../utils/optimization.js';
+import express from "express";
+import db from '../utils/db.js';
 
 const router = express.Router();
 
-// Example array of locations (technician's location and addresses to visit)
-// const locations = [
-//     { name: 'Amalner', lat: 21.0397, lon: 75.0579 },
-//     { name: 'Jalgaon', lat: 21.0077, lon: 75.5626 },
-//     { name: 'Mumbai', lat: 19.0760, lon: 72.8777 },
-//     { name: 'Pune', lat: 18.5204, lon: 73.8567 },
-//     { name: 'Nashik', lat: 20.0059, lon: 73.7910 },
-//     { name: 'Chopda', lat: 21.2495, lon: 75.2927 },
-//     { name: 'Dondaicha', lat: 21.3269, lon: 74.5683 }
-// ];
+// Function to calculate distance between two points using Haversine formula
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371e3; // Earth radius in meters
+  const φ1 = lat1 * Math.PI / 180; // φ, λ in radians
+  const φ2 = lat2 * Math.PI / 180;
+  const Δφ = (lat2 - lat1) * Math.PI / 180;
+  const Δλ = (lon2 - lon1) * Math.PI / 180;
 
-let locationsData = []; // Variable to store received data
-let resultData = []; // Result to send frontend
+  const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+            Math.cos(φ1) * Math.cos(φ2) *
+            Math.sin(Δλ/2) * Math.sin(Δλ/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 
-// API endpoint to receive data from frontend
-router.post('/receive-data', (req, res) => {
-  const receivedData = req.body;
+  return R * c; // Distance in meters
+}
 
-  // Validation for received data format
-  if (!Array.isArray(receivedData)) {
-    return res.status(400).json({ error: 'Data should be an array.' });
+// Function to find the nearest neighbor
+function findNearestNeighbor(location, addresses) {
+  let nearestAddress = addresses[0];
+  let shortestDistance = calculateDistance(location.lat, location.lon, nearestAddress.lat, nearestAddress.lon);
+
+  for (let i = 1; i < addresses.length; i++) {
+    const distance = calculateDistance(location.lat, location.lon, addresses[i].lat, addresses[i].lon);
+    if (distance < shortestDistance) {
+      nearestAddress = addresses[i];
+      shortestDistance = distance;
+    }
   }
 
-  const validData = receivedData.every(item => (
-    typeof item.name === 'string' &&
-    typeof item.lat === 'number' &&
-    typeof item.lon === 'number'
-  ));
+  return nearestAddress;
+}
 
-  if (!validData) {
-    return res.status(400).json({ error: 'Invalid data format.' });
-  }
+// Function to calculate the shortest path
+function calculateShortestPath(locations) {
+  // Get the technician's location from the first element of the locations array
+  const technicianLocation = locations[0];
 
-  // Assign the received data to the variable
-  locationsData = receivedData;
+  // Get the addresses to visit (excluding the technician's location)
+  const addressesToVisit = locations.slice(1);
 
-  res.json({ message: 'Data received successfully.' });
-});
+  const resultData = [technicianLocation]; // Initialize resultData with technician's location
 
-// Get the technician's location from the first element of the locations array
-const technicianLocation = locations[0];
-
-// Get the addresses to visit (excluding the technician's location)
-const addressesToVisit = locations.slice(1);
-
-resultData.push(technicianLocation); // Push technician's location to resultData
-
-// Function to find nearest locations and simulate technician visiting addresses one by one
-function visitAddresses() {
+  // Visit addresses one by one
   while (addressesToVisit.length > 0) {
-    // Find the nearest address from the technician's location
     const nearestAddress = findNearestNeighbor(technicianLocation, addressesToVisit);
-
-    // Push the nearest address to resultData
     resultData.push(nearestAddress);
-
-    // Remove the visited address from the addressesToVisit array
     const index = addressesToVisit.findIndex(address => address.name === nearestAddress.name);
     if (index > -1) {
       addressesToVisit.splice(index, 1);
     }
-
-    // Set the technician's location to the visited address for the next iteration
     technicianLocation.lat = nearestAddress.lat;
     technicianLocation.lon = nearestAddress.lon;
   }
+
+  return resultData;
 }
 
-// Start visiting addresses
-visitAddresses();
+const getAddressByTechnicianId = (technician_id, callback) => {
+  db.all(`SELECT location AS name, longitude AS lon, latitude AS lat, 'technician' AS type 
+        FROM technician 
+        WHERE id = ?
+        UNION
+        SELECT address AS name, longitude AS lon, latitude AS lat, 'address' AS type 
+        FROM address 
+        WHERE technician_id = ? 
+        ORDER BY type DESC`, [technician_id, technician_id], (err, rows) => {
+    if (err) {
+      console.error(err.message);
+      callback(err, null);
+    } else {
+      callback(null, rows);
+    }
+  });
+};
 
-console.log(resultData);
+// Usage example
+router.get('/shortestpath/:technician_id', (req, res) => {
+  const technician_id = req.params.technician_id;
 
-// Export the router for use in other files
+  getAddressByTechnicianId(technician_id, (err, data) => {
+    if (err) {
+      res.status(500).json({ error: 'Error retrieving data from the address table' });
+    } else {
+      // Calculate shortest path
+      const shortestPath = calculateShortestPath(data);
+      res.status(200).json(shortestPath);
+    }
+  });
+});
+
 export default router;
