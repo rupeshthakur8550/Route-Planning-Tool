@@ -8,14 +8,15 @@ mapboxgl.accessToken = import.meta.env.VITE_MAPBOX;
 const Map = ({ technicianLocation }) => {
     const mapContainer = useRef(null);
     const map = useRef(null);
-    const [lng, setLng] = useState(technicianLocation?.longitude || 0); 
-    const [lat, setLat] = useState(technicianLocation?.latitude || 0); 
+    const [lng, setLng] = useState(technicianLocation?.longitude || 0);
+    const [lat, setLat] = useState(technicianLocation?.latitude || 0);
     const [zoom, setZoom] = useState(12);
     const [technicianId, setTechnicianId] = useState(technicianLocation?.id || 0);
     const [checkboxes, setCheckboxes] = useState([]);
     const [allChecked, setAllChecked] = useState(false);
     const [coordinates, setCoordinates] = useState([]);
     const [markerVisibility, setMarkerVisibility] = useState({});
+    const [technicianLocationVisible, setTechnicianLocationVisible] = useState(false);
 
     useEffect(() => {
         if (!map.current) {
@@ -44,11 +45,9 @@ const Map = ({ technicianLocation }) => {
             fetch(`http://localhost:3001/api/address/${technicianLocation.id}`)
                 .then(response => response.json())
                 .then(data => {
-                    // Extract coordinates and set them into state variable
                     const coordinatesArray = data.map(element => [element.longitude, element.latitude]);
                     setCoordinates(coordinatesArray);
 
-                    // Initialize marker visibility state
                     const initialMarkerVisibility = {};
                     coordinatesArray.forEach((_, index) => {
                         initialMarkerVisibility[index] = true; // Initially all markers are visible
@@ -59,7 +58,7 @@ const Map = ({ technicianLocation }) => {
                         <div key={`address${index}`}>
                             <input
                                 type="checkbox"
-                                checked={markerVisibility[index]} // Use markerVisibility to determine checked status
+                                checked={markerVisibility[index]} 
                                 id={`address${index}`}
                                 className="address-checkbox"
                                 value={element.address}
@@ -69,7 +68,7 @@ const Map = ({ technicianLocation }) => {
                             <br />
                         </div>
                     ));
-                    
+
                     setCheckboxes(checkboxes);
                 })
                 .catch(error => console.error('Error fetching address data:', error));
@@ -77,23 +76,32 @@ const Map = ({ technicianLocation }) => {
     }, [technicianLocation]);
 
     useEffect(() => {
-        const allChecked = Object.values(markerVisibility).every(visible => visible);
-        setAllChecked(allChecked);
+        const anyChecked = Object.values(markerVisibility).some(visible => visible);
+        const location = Object.values(markerVisibility).some(visible => !visible); 
+        setAllChecked(!anyChecked);
+        setTechnicianLocationVisible(!location);
     }, [markerVisibility]);
 
     const handleCheckboxChange = (index) => {
         setMarkerVisibility(prevVisibility => {
             const updatedVisibility = { ...prevVisibility };
-            updatedVisibility[index] = !updatedVisibility[index]; // Toggle marker visibility
-            
-            // Check if all markers are checked
-            const allChecked = Object.values(updatedVisibility).every(visible => visible);
-            setAllChecked(allChecked);
-            
+            updatedVisibility[index] = !updatedVisibility[index];
+            const anyChecked = Object.values(updatedVisibility).some(visible => visible);
+            setAllChecked(anyChecked);
             return updatedVisibility;
         });
     };
-    
+
+    const technicianMarker = technicianLocationVisible ? (
+        <Marker longitude={technicianLocation.longitude} latitude={technicianLocation.latitude} map={map.current} color="#FF0000" />
+    ) : null;
+
+    const addressMarkers = coordinates.map((coord, index) => (
+        markerVisibility[index] && (
+            <Marker key={`marker${index}`} longitude={coord[0]} latitude={coord[1]} map={map.current} />
+        )
+    ));
+
     const handleTaskCompleted = () => {
         console.log('Task completed!');
     };
@@ -102,24 +110,17 @@ const Map = ({ technicianLocation }) => {
         <div className="h-screen flex items-center justify-center">
             <div className="absolute inset-0 overflow-hidden">
                 <div ref={mapContainer} className="absolute inset-0" />
-
-                {/* Render Marker component passing initial longitude, latitude, and map instance */}
-                <Marker longitude={technicianLocation.longitude} latitude={technicianLocation.latitude} map={map.current} color="#FF0000"/>
-
-                {/* Render markers for each coordinate */}
-                {coordinates.map((coord, index) => (
-                    markerVisibility[index] && // Check visibility before rendering
-                    <Marker key={`marker${index}`} longitude={coord[0]} latitude={coord[1]} map={map.current}/>
-                ))}
+                {technicianMarker}
+                {addressMarkers}
             </div>
             <div className="sidebar absolute top-0 left-0 m-4 blur-0 bg-orange-200 text-black p-3 rounded-lg z-10">
                 <p>Technician ID: {technicianId}</p>
-                {checkboxes} 
-                {!allChecked ? (
+                {checkboxes}
+                {allChecked && (
                     <button onClick={handleTaskCompleted} className='bg-green-500 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md mt-2'>
                         Task Completed
                     </button>
-                ) : null}
+                )}
             </div>
         </div>
     );
