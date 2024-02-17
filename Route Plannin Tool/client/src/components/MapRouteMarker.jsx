@@ -8,6 +8,7 @@ mapboxgl.accessToken = import.meta.env.VITE_MAPBOX;
 const MapRouteMarker = ({ technicianLocation, coordinates, waypoints }) => {
   const mapContainerRef = useRef(null);
   const [map, setMap] = useState(null);
+  const [allRouteCoordinates, setAllRouteCoordinates] = useState([]);
 
   useEffect(() => {
     if (!map) {
@@ -33,45 +34,46 @@ const MapRouteMarker = ({ technicianLocation, coordinates, waypoints }) => {
 
     const fetchRoute = async () => {
       try {
-        let routeCoordinates = [];
+        let allCoordinates = [];
 
-        // Include technician's location as the first waypoint
-        waypoints.unshift({ lon: technicianLocation.longitude, lat: technicianLocation.latitude });
+        waypoints.splice(1,0, { lon: technicianLocation.longitude, lat: technicianLocation.latitude });
 
-        for (let i = 0; i < waypoints.length - 1; i++) {
+        for (let i = 1; i < waypoints.length - 1; i++) {
           const fromWaypoint = waypoints[i];
           const toWaypoint = waypoints[i + 1];
           const response = await fetch(`https://api.mapbox.com/directions/v5/mapbox/cycling/${fromWaypoint.lon},${fromWaypoint.lat};${toWaypoint.lon},${toWaypoint.lat}?geometries=geojson&access_token=${mapboxgl.accessToken}`);
           const data = await response.json();
           const segmentCoordinates = data.routes[0].geometry.coordinates;
-          routeCoordinates = routeCoordinates.concat(segmentCoordinates);
-        }
+          allCoordinates = allCoordinates.concat(segmentCoordinates);
 
-        map.addLayer({
-          id: 'route',
-          type: 'line',
-          source: {
-            type: 'geojson',
-            data: {
-              type: 'Feature',
-              geometry: {
-                type: 'LineString',
-                coordinates: routeCoordinates,
+          map.addLayer({
+            id: `route-${i}`,
+            type: 'line',
+            source: {
+              type: 'geojson',
+              data: {
+                type: 'Feature',
+                geometry: {
+                  type: 'LineString',
+                  coordinates: allCoordinates,
+                },
               },
             },
-          },
-          layout: {
-            'line-join': 'round',
-            'line-cap': 'round',
-          },
-          paint: {
-            'line-color': '#007bff',
-            'line-width': 5,
-          },
-        });
+            layout: {
+              'line-join': 'round',
+              'line-cap': 'round',
+            },
+            paint: {
+              'line-color': '#007bff',
+              'line-width': 5,
+            },
+          });
 
-        const bounds = routeCoordinates.reduce((bounds, coord) => bounds.extend(coord), new mapboxgl.LngLatBounds(routeCoordinates[0], routeCoordinates[routeCoordinates.length - 1]));
-        map.fitBounds(bounds, { padding: 50 });
+          const bounds = allCoordinates.reduce((bounds, coord) => bounds.extend(coord), new mapboxgl.LngLatBounds(allCoordinates[0], allCoordinates[allCoordinates.length - 1]));
+          map.fitBounds(bounds, { padding: 50 });
+        }
+
+        setAllRouteCoordinates(allCoordinates);
       } catch (error) {
         console.error('Error fetching route:', error);
       }
@@ -80,9 +82,11 @@ const MapRouteMarker = ({ technicianLocation, coordinates, waypoints }) => {
     fetchRoute();
 
     return () => {
-      if (map.getLayer('route')) {
-        map.removeLayer('route');
-        map.removeSource('route');
+      if (map) {
+        waypoints.forEach((_, i) => {
+          map.removeLayer(`route-${i}`);
+          map.removeSource(`route-${i}`);
+        });
       }
     };
   }, [map, waypoints]);
