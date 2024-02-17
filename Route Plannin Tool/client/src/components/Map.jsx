@@ -6,6 +6,8 @@ import MapRouteMarker from './MapRouteMarker';
 // Ensure Mapbox access token is set
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX;
 
+const connect = import.meta.env.VITE_BACKEN;
+
 const Map = ({ technicianLocation }) => {
     const mapContainer = useRef(null);
     const map = useRef(null);
@@ -18,8 +20,8 @@ const Map = ({ technicianLocation }) => {
         if (technicianLocation) {
             setLoading(true); // Set loading state
             Promise.all([
-                fetch(`http://localhost:3001/api/address/${technicianLocation.id}`).then(response => response.json()),
-                fetch(`http://localhost:3001/api/shortestpath/${technicianLocation.id}`).then(response => response.json())
+                fetch(`${connect}/api/address/${technicianLocation.id}`).then(response => response.json()),
+                fetch(`${connect}/api/shortestpath/${technicianLocation.id}`).then(response => response.json())
             ]).then(([addressData, shortestPathData]) => {
                 console.log('Address data:', addressData); // Log address data
                 console.log('Shortest path data:', shortestPathData); // Log shortest path data

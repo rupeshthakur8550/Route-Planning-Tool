@@ -5,6 +5,8 @@ import Marker from './Marker';
 // Set your Mapbox access token here
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX;
 
+const connect = import.meta.env.VITE_BACKEN;
+
 const MapRouteMarker = ({ technicianLocation, coordinates, waypoints }) => {
   const mapContainerRef = useRef(null);
   const [map, setMap] = useState(null);
@@ -13,7 +15,7 @@ const MapRouteMarker = ({ technicianLocation, coordinates, waypoints }) => {
   const handleTestCompleted = async () => {
     try {
       // Perform PUT request to set completion status
-      await fetch(`http://localhost:3001/api/technician/${technicianLocation.id}/completion`, {
+      await fetch(`${connect}/api/technician/${technicianLocation.id}/completion`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -22,7 +24,7 @@ const MapRouteMarker = ({ technicianLocation, coordinates, waypoints }) => {
       });
 
       // Perform DELETE request to remove data from backend
-      await fetch(`http://localhost:3001/api/address/${technicianLocation.id}`, {
+      await fetch(`${connect}/api/address/${technicianLocation.id}`, {
         method: 'DELETE',
       });
 
@@ -30,7 +32,7 @@ const MapRouteMarker = ({ technicianLocation, coordinates, waypoints }) => {
       window.location.href = 'http://localhost:5173/';
 
       // Make another API call to remove the technician from the backend
-      await fetch(`http://localhost:3001/api/technician/${technicianLocation.id}`, {
+      await fetch(`${connect}/api/technician/${technicianLocation.id}`, {
         method: 'DELETE',
       });
 

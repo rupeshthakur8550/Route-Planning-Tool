@@ -5,6 +5,9 @@ import Map from './components/Map';
 import useGeocode from './components/customhooks/useGeoCode';
 
 function App() {
+
+  const connect = import.meta.env.VITE_BACKEN;
+
   const [homeAddresses, setHomeAddresses] = useState([]);
   const [technicianAddress, setTechnicianAddress] = useState([]);
   const [routePlanned, setRoutePlanned] = useState(false);
@@ -16,7 +19,7 @@ function App() {
   useEffect(() => {
     if (id !== 0) {
       combinedAddresses.Addresses.forEach(addressData => {
-        fetch('http://localhost:3001/api/address', {
+        fetch(`${connect}/api/address`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -62,7 +65,7 @@ function App() {
       latitude: combinedAddressesData.Technician_Address[0].coordinates[1]
     };
   
-    fetch('http://localhost:3001/api/technician', {
+    fetch(`${connect}/api/technician`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
