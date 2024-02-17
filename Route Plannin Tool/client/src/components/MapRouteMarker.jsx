@@ -10,6 +10,36 @@ const MapRouteMarker = ({ technicianLocation, coordinates, waypoints }) => {
   const [map, setMap] = useState(null);
   const [allRouteCoordinates, setAllRouteCoordinates] = useState([]);
 
+  const handleTestCompleted = async () => {
+    try {
+      // Perform PUT request to set completion status
+      await fetch(`http://localhost:3001/api/technician/${technicianLocation.id}/completion`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ completed: true }), // Assuming you need to send some data
+      });
+
+      // Perform DELETE request to remove data from backend
+      await fetch(`http://localhost:3001/api/address/${technicianLocation.id}`, {
+        method: 'DELETE',
+      });
+
+      // Navigate to the home page
+      window.location.href = 'http://localhost:5173/';
+
+      // Make another API call to remove the technician from the backend
+      await fetch(`http://localhost:3001/api/technician/${technicianLocation.id}`, {
+        method: 'DELETE',
+      });
+
+      onsole.log('All destinations reached!');
+    } catch (error) {
+      console.error('Error completing test:', error);
+    }
+  };
+
   useEffect(() => {
     if (!map) {
       const newMap = new mapboxgl.Map({
@@ -108,6 +138,11 @@ const MapRouteMarker = ({ technicianLocation, coordinates, waypoints }) => {
           ))}
         </>
       )}
+      <div className='absolute top-0 left-0 m-4 blur-0 p-3 rounded-lg z-10'>
+      <button onClick={handleTestCompleted} className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+        Test Completed
+      </button>
+      </div>
     </div>
   );
 };
