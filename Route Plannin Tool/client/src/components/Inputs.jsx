@@ -4,16 +4,16 @@ function Inputs({ placeholder, setAllAddresses }) {
     const [addresses, setAddresses] = useState([]);
     const handleAddAddress = (event) => {
         event.preventDefault();
-      
+
         const newAddress = event.target.parentNode.querySelector('input[name="address"]').value.trim();
-      
+
         if (newAddress) {
-          setAddresses((prevAddresses) => [...prevAddresses, newAddress]);
-          event.target.parentNode.querySelector('input[name="address"]').value = '';
-          setAllAddresses((prevAddresses) => [...prevAddresses, newAddress]);
+            setAddresses((prevAddresses) => [...prevAddresses, newAddress]);
+            event.target.parentNode.querySelector('input[name="address"]').value = '';
+            setAllAddresses((prevAddresses) => [...prevAddresses, newAddress]);
         }
-      };
-      
+    };
+
     const handleDeleteAddress = (index) => {
         const updatedAddresses = [...addresses];
         updatedAddresses.splice(index, 1);

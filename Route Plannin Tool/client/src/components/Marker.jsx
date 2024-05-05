@@ -11,7 +11,7 @@ function Marker({ longitude, latitude, map, color }) {
       marker.setLngLat([longitude, latitude]);
     });
 
-    return () => marker.remove(); 
+    return () => marker.remove();
   }, [longitude, latitude, map, color]);
 
   return null;

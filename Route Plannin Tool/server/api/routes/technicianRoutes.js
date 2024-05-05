@@ -8,7 +8,7 @@ router.post('/technician', (req, res) => {
     const { location, longitude, latitude } = req.body;
 
     db.run(`INSERT INTO technician (location, longitude, latitude) 
-          VALUES (?, ?, ?)`, [location, longitude, latitude], function(err) {
+          VALUES (?, ?, ?)`, [location, longitude, latitude], function (err) {
         if (err) {
             console.error(err.message);
             res.status(500).send('Error inserting data into the technician table');
@@ -27,7 +27,7 @@ router.post('/technician', (req, res) => {
 router.put('/technician/:technician_id/completion', (req, res) => {
     const technician_id = req.params.technician_id;
 
-    db.run(`UPDATE technician SET completion_status = 1 WHERE id = ?`, [technician_id], function(err) {
+    db.run(`UPDATE technician SET completion_status = 1 WHERE id = ?`, [technician_id], function (err) {
         if (err) {
             console.error(err.message);
             res.status(500).send('Error updating completion status for the provided technician ID');
@@ -44,7 +44,7 @@ router.put('/technician/:technician_id/completion', (req, res) => {
 router.delete('/technician/:technician_id', (req, res) => {
     const technician_id = req.params.technician_id;
 
-    db.run(`DELETE FROM technician WHERE id = ?`, [technician_id], function(err) {
+    db.run(`DELETE FROM technician WHERE id = ?`, [technician_id], function (err) {
         if (err) {
             console.error(err.message);
             res.status(500).send('Error deleting entry for the provided technician ID');

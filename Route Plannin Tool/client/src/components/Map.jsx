@@ -3,7 +3,6 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import MapRouteMarker from './MapRouteMarker';
 
-// Ensure Mapbox access token is set
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX;
 
 const connect = import.meta.env.VITE_BACKEN;
@@ -60,15 +59,22 @@ const Map = ({ technicianLocation }) => {
         };
     }, [technicianLocation]);
 
+    useEffect(() => {
+        // Fit map to bounds when coordinates change
+        if (map.current && coordinates.length > 0) {
+            const bounds = new mapboxgl.LngLatBounds();
+            coordinates.forEach(coord => bounds.extend([coord.lon, coord.lat]));
+            map.current.fitBounds(bounds, { padding: 50 });
+        }
+    }, [coordinates]);
+
     return (
-        <div className="h-screen flex items-center justify-center">
-            <div className="absolute inset-0 overflow-hidden" ref={mapContainer}>
-                {loading ? (
-                    <div>Loading...</div>
-                ) : lineCoordinates.length > 0 && technicianLocation && coordinates.length > 0 ? (
-                    <MapRouteMarker technicianLocation={technicianLocation} coordinates={coordinates} waypoints={lineCoordinates} />
-                ) : null}
-            </div>
+        <div className="h-screen relative">
+            <div className="absolute inset-0 overflow-hidden" ref={mapContainer} />
+            {loading && <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 z-10">Loading...</div>}
+            {lineCoordinates.length > 0 && technicianLocation && coordinates.length > 0 && (
+                <MapRouteMarker technicianLocation={technicianLocation} coordinates={coordinates} waypoints={lineCoordinates} />
+            )}
         </div>
     );
 };

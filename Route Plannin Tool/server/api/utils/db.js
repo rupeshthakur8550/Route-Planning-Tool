@@ -5,7 +5,7 @@ const db = new sqlite3.Database('database.db', (err) => {
     console.error(err.message);
   }
   console.log('Connected to the database.');
-  createTables(); 
+  createTables();
 });
 
 const createTables = () => {

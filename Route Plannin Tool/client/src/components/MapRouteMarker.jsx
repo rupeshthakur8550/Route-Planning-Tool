@@ -68,7 +68,7 @@ const MapRouteMarker = ({ technicianLocation, coordinates, waypoints }) => {
       try {
         let allCoordinates = [];
 
-        waypoints.splice(1,0, { lon: technicianLocation.longitude, lat: technicianLocation.latitude });
+        waypoints.splice(1, 0, { lon: technicianLocation.longitude, lat: technicianLocation.latitude });
 
         for (let i = 1; i < waypoints.length - 1; i++) {
           const fromWaypoint = waypoints[i];
@@ -124,7 +124,7 @@ const MapRouteMarker = ({ technicianLocation, coordinates, waypoints }) => {
   }, [map, waypoints]);
 
   return (
-    <div style={{ width: '100%', height: '500px' }}>
+    <div style={{ width: '100%', height: '100%' }}>
       <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} />
       {map && (
         <>
@@ -141,9 +141,9 @@ const MapRouteMarker = ({ technicianLocation, coordinates, waypoints }) => {
         </>
       )}
       <div className='absolute top-0 left-0 m-4 blur-0 p-3 rounded-lg z-10'>
-      <button onClick={handleTestCompleted} className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
-        Test Completed
-      </button>
+        <button onClick={handleTestCompleted} className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+          Route Completed
+        </button>
       </div>
     </div>
   );
